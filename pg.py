@@ -1,9 +1,8 @@
 import PySpin
 import cv2
-import numpy as np
 
 
-# TODO - This class may not be necessary. Consider simply rolling into Camera.
+# TODO - This class may not be useful. Consider simply rolling into Camera.
 class Spinnaker(object):
     def __init__(self):
         # Retrieve singleton reference to system object
@@ -24,8 +23,10 @@ class Spinnaker(object):
 
 
 class Camera(object):
-    '''Wraps a PointGrey camera using the Spinnaker SDK and yields results
-    that can be used with OpenCV.'''
+    """
+    Wraps a PointGrey camera using the Spinnaker SDK and yields results
+    that can be used with OpenCV.
+    """
 
     def __init__(self, cam):
         self.cam = cam
@@ -102,28 +103,22 @@ class Camera(object):
 
         return result
 
-    def getImage(self):
-        # Acquire one image
+    def read(self, grayscale=True):
+        """
+        Return one image from the camera.
+        """
+
         image_result = self.cam.GetNextImage()
-
-        # help(image_result)
-        # print('PixelFormat:', image_result.GetPixelFormatName())
-
-        width = image_result.GetWidth()
-        height = image_result.GetHeight()
 
         if image_result.IsIncomplete():
             raise RuntimeError('Image incomplete with image status %d ...' % image_result.GetImageStatus())
 
+        # print('PixelFormat:', image_result.GetPixelFormatName())
         pixel_format = image_result.GetPixelFormat()
-        if pixel_format != PySpin.PixelFormat_BGR8:
-            image_converted = image_result.Convert(PySpin.PixelFormat_BGR8)
+        if grayscale and pixel_format != PySpin.PixelFormat_BGR8:
+            return image_result.Convert(PySpin.PixelFormat_BGR8).GetNDArray()
         else:
-            image_converted = image_result
-
-        image_result.Release()
-
-        return image_converted.GetNDArray()
+            return image_result.GetNDArray()
 
 
 def main():
@@ -131,21 +126,11 @@ def main():
     cam = controller.getCamera()
     cam.printDeviceInfo()
 
-    while False:
-        i = input("> ")
-        try:
-            eval(i)
-        except:
-            print("whoops")
-        if not i:
-            break
-
     while cv2.waitKey(1) != ord(' '):
-        img = cam.getImage()
-        data = img.GetNDArray()
-        cv2.imshow('data', data)
-    
-    cv2.destroyWindow('data')
+        img = cam.read()
+        cv2.imshow('img', img)
+
+    cv2.destroyWindow('img')
     del cam
 
 
